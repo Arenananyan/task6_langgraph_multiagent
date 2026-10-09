@@ -1,0 +1,31 @@
+# API keys and environment variables
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Runtime and generated workflow files
+outputs/workflow_state.json
+outputs/silverbox_attempt_*.py
+outputs/generated_solution.py
+
+# Keep scientific figures
+!outputs/plots/
+!outputs/plots/*.png
+
+# Separate Task 5 reference repository
+task5_reference/
+
+# Local Python execution and test artifacts
+outputs/*.py
