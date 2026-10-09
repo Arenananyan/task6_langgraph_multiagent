@@ -72,6 +72,11 @@ The evaluation reproduces the Task 5 Silverbox oscillator experiment using its e
 
 The project evaluates the existing trained checkpoint. **It does not retrain the neural network.**
 
+**Relationship to Task 5:** The Task 5 repository now also contains Model F,
+whose best saved run has a lower test RMSE. The Task 6 workflow documented here
+evaluates **Model E** specifically, so its reported RMSE should be read as a
+reproduction of that checkpoint rather than the current best Task 5 score.
+
 ### Results
 
 | Metric | Value |
