@@ -4,6 +4,14 @@
 adds clarification and approval turns with durable LangGraph interruption and
 resume. The Task 6 workflow described below remains available unchanged.
 
+**Homework 2, Task 2:** The [simulated scattering-bench guide](homework2_task2/README.md)
+documents the noisy beam-focusing experiment. The completed four-trial agent
+run, including its [summary and figures](outputs/task2_noisy_20261013_023751_907807/),
+reported a mean final enhancement of **11.777839**. The Task 1
+[run evidence](homework2_task1/evidence.md) records the clarification,
+refusal, approval, and measured RMSE from its completed workflow. Screen
+recordings are supplied separately with the submission email.
+
 ## Overview
 
 This project implements a multi-agent AI workflow using **LangGraph** and the **Groq API** to reproduce and evaluate a neural-network model of the Silverbox nonlinear oscillator from Task 5.
