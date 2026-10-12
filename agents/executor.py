@@ -67,6 +67,16 @@ Requirements:
 - Do not use network calls, shell commands, subprocess, or file deletion.
 - Do not modify files in task5_reference.
 - Never claim execution occurred; the Python runner will actually execute it.
+
+Task 2 focusing action:
+- If the instruction asks to focus a simulated beam, use the installed bridge
+  `from tools.focusing_tool import FocusSettings, run_focus_experiment`.
+- The tool simulates the lecture setup: a 16x16 amplitude DMD, a 64x64 camera,
+  a 5x5 target, four 5x5 background regions, 2% Gaussian noise, and 500
+  iterations. The agent must choose and record the settings; do not invent a
+  camera measurement or enhancement value.
+- Call `run_focus_experiment(...)`, print its returned dictionary as JSON, and
+  include the actual `final_enhancement` in the executor message.
 """
 
 
