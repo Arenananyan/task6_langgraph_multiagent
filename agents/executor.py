@@ -166,6 +166,24 @@ def validate_generated_code(code: str) -> None:
                     )
 
 
+def focus_script() -> str:
+    """Return the small, reviewed runner used for the Task 2 tool call."""
+    return '''import json
+from tools.focusing_tool import FocusSettings, run_focus_experiment
+
+settings = FocusSettings(
+    dmd_rows=16, dmd_cols=16, camera_rows=64, camera_cols=64,
+    target_rows=5, target_cols=5, noise_fraction=0.02,
+    iterations=500, seed=42,
+)
+result = run_focus_experiment(settings, output_dir="outputs/task2_focus")
+print(json.dumps(result))
+print(f"FINAL_ENHANCEMENT: {result['final_enhancement']}")
+print(f"INITIAL_IMAGE_PATH: {result['outputs'][1]}")
+print(f"FINAL_IMAGE_PATH: {result['outputs'][2]}")
+'''
+
+
 def executor_node(state: AgentState, review_mode: bool = False) -> dict:
     history = "\n".join(
         f"{message.name or message.type}: {message.content}"
@@ -180,20 +198,23 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
     measured_enhancement = None
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        response = llm.invoke(
-            [
-                SystemMessage(content=EXECUTOR_PROMPT),
-                HumanMessage(
-                    content=(
-                        f"Orchestrator instruction:\n{instruction}\n\n"
-                        f"Previous agent messages:\n{history}\n\n"
-                        f"Previous execution feedback:\n{feedback}"
-                    )
-                ),
-            ]
-        )
-
-        code = extract_code(response.content)
+        if focusing_task:
+            # Keep Task 2 isolated from the legacy Task 5 RMSE generator.
+            code = focus_script()
+        else:
+            response = llm.invoke(
+                [
+                    SystemMessage(content=EXECUTOR_PROMPT),
+                    HumanMessage(
+                        content=(
+                            f"Orchestrator instruction:\n{instruction}\n\n"
+                            f"Previous agent messages:\n{history}\n\n"
+                            f"Previous execution feedback:\n{feedback}"
+                        )
+                    ),
+                ]
+            )
+            code = extract_code(response.content)
 
         try:
             validate_generated_code(code)
