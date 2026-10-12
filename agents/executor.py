@@ -111,6 +111,20 @@ def extract_rmse(stdout: str) -> float | None:
     return value if math.isfinite(value) and value >= 0 else None
 
 
+def extract_enhancement(stdout: str) -> float | None:
+    """Read the measured Task 2 enhancement from executor output."""
+    matches = re.findall(
+        r"^FINAL_ENHANCEMENT:\s*"
+        r"([+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*$",
+        stdout,
+        flags=re.MULTILINE,
+    )
+    if not matches:
+        return None
+    value = float(matches[-1])
+    return value if math.isfinite(value) and value >= 0 else None
+
+
 
 def validate_generated_code(code: str) -> None:
     """Reject obvious dangerous operations before execution."""
@@ -159,9 +173,11 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
     )
 
     instruction = state["instruction"]
+    focusing_task = "focus" in instruction.casefold() or "enhancement" in instruction.casefold()
     feedback = ""
     last_result = None
     measured_rmse = None
+    measured_enhancement = None
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
         response = llm.invoke(
@@ -217,14 +233,18 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
                 "test_rmse": None,
             }
 
-        if last_result["success"]:
+        if last_result["success"] and focusing_task:
+            measured_enhancement = extract_enhancement(last_result["stdout"])
+        elif last_result["success"]:
             measured_rmse = extract_rmse(last_result["stdout"])
 
-        if last_result["success"] and measured_rmse is not None:
+        metric_found = measured_enhancement is not None if focusing_task else measured_rmse is not None
+        if last_result["success"] and metric_found:
             break
 
         feedback = (
-            f"Attempt {attempt} failed or did not print TEST_RMSE_V.\n"
+            f"Attempt {attempt} failed or did not print the required "
+            f"{'FINAL_ENHANCEMENT' if focusing_task else 'TEST_RMSE_V'}.\n"
             f"Exit code: {last_result['exit_code']}\n"
             f"Timed out: {last_result['timed_out']}\n"
             f"STDOUT:\n{last_result['stdout'][-4000:]}\n"
@@ -235,7 +255,7 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
     success = (
         last_result is not None
         and last_result["success"]
-        and measured_rmse is not None
+        and (measured_enhancement is not None if focusing_task else measured_rmse is not None)
     )
 
     summary = {
@@ -246,7 +266,8 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
         "timed_out": last_result["timed_out"],
         "stdout": last_result["stdout"][-4000:],
         "stderr": last_result["stderr"][-4000:],
-        "test_rmse_v": measured_rmse if success else None,
+        "test_rmse_v": measured_rmse if success and not focusing_task else None,
+        "final_enhancement": measured_enhancement if success and focusing_task else None,
     }
 
     return {
@@ -257,7 +278,7 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
             )
         ],
         "execution_success": success,
-        "test_rmse": measured_rmse if success else None,
+        "test_rmse": measured_rmse if success and not focusing_task else None,
     }
 
 
