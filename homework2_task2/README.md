@@ -31,6 +31,19 @@ reported metric is the mean final enhancement across independent trials, not
 the best trial. Old noiseless-search results are not evidence for this version.
 The repository-local bridge works without a sibling project folder.
 
+## Recorded agent run
+
+The completed `task2-video-07` run is saved under
+[`outputs/task2_noisy_20261013_023751_907807`](../outputs/task2_noisy_20261013_023751_907807/).
+The model selected a 16x16 DMD, a 5x5 target with four adjacent background
+regions, 1500 iterations and four independent trials. Each trial used fresh
+noisy camera measurements during the search. The final enhancements were
+10.128893, 10.219241, 13.417501 and 13.345720. Their mean, reported by
+the tool and accepted when the thread finished, was **11.777839**.
+The directory includes the JSON summary, numeric records, camera comparisons
+and enhancement histories for all four trials. The screen recordings are
+provided separately with the submission email.
+
 Start through `python -m homework2_task1.cli start --thread-id NEW_ID --request
 "Focus the beam on the simulated scattering bench. Choose the settings and run
 independent noisy trials; save images and report mean final enhancement."`

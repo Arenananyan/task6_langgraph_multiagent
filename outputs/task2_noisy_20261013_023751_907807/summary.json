@@ -1,0 +1,127 @@
+{
+  "trials": [
+    {
+      "trial": 1,
+      "seed": 4087900052,
+      "measurement_protocol": "noisy search with independent proposal confirmation",
+      "settings": {
+        "dmd_rows": 16,
+        "dmd_cols": 16,
+        "camera_rows": 64,
+        "camera_cols": 64,
+        "target_rows": 5,
+        "target_cols": 5,
+        "noise_fraction": 0.02,
+        "iterations": 1500,
+        "seed": 4087900052
+      },
+      "target_region": {
+        "row_start": 13,
+        "row_stop": 18,
+        "col_start": 29,
+        "col_stop": 34
+      },
+      "initial_enhancement": 0.8160581904291627,
+      "final_enhancement": 10.128893302818973,
+      "improvement_factor": 12.41197431949334,
+      "outputs": [
+        "outputs/task2_noisy_20261013_023751_907807/trial_01/focus_result.npz",
+        "outputs/task2_noisy_20261013_023751_907807/trial_01/initial_vs_final_camera.png",
+        "outputs/task2_noisy_20261013_023751_907807/trial_01/enhancement_history.png"
+      ]
+    },
+    {
+      "trial": 2,
+      "seed": 2849536002,
+      "measurement_protocol": "noisy search with independent proposal confirmation",
+      "settings": {
+        "dmd_rows": 16,
+        "dmd_cols": 16,
+        "camera_rows": 64,
+        "camera_cols": 64,
+        "target_rows": 5,
+        "target_cols": 5,
+        "noise_fraction": 0.02,
+        "iterations": 1500,
+        "seed": 2849536002
+      },
+      "target_region": {
+        "row_start": 31,
+        "row_stop": 36,
+        "col_start": 23,
+        "col_stop": 28
+      },
+      "initial_enhancement": 0.7005303853864169,
+      "final_enhancement": 10.219241197516125,
+      "improvement_factor": 14.587862868902008,
+      "outputs": [
+        "outputs/task2_noisy_20261013_023751_907807/trial_02/focus_result.npz",
+        "outputs/task2_noisy_20261013_023751_907807/trial_02/initial_vs_final_camera.png",
+        "outputs/task2_noisy_20261013_023751_907807/trial_02/enhancement_history.png"
+      ]
+    },
+    {
+      "trial": 3,
+      "seed": 3930703815,
+      "measurement_protocol": "noisy search with independent proposal confirmation",
+      "settings": {
+        "dmd_rows": 16,
+        "dmd_cols": 16,
+        "camera_rows": 64,
+        "camera_cols": 64,
+        "target_rows": 5,
+        "target_cols": 5,
+        "noise_fraction": 0.02,
+        "iterations": 1500,
+        "seed": 3930703815
+      },
+      "target_region": {
+        "row_start": 29,
+        "row_stop": 34,
+        "col_start": 35,
+        "col_stop": 40
+      },
+      "initial_enhancement": 0.745387929580301,
+      "final_enhancement": 13.417501143111986,
+      "improvement_factor": 18.00069549109396,
+      "outputs": [
+        "outputs/task2_noisy_20261013_023751_907807/trial_03/focus_result.npz",
+        "outputs/task2_noisy_20261013_023751_907807/trial_03/initial_vs_final_camera.png",
+        "outputs/task2_noisy_20261013_023751_907807/trial_03/enhancement_history.png"
+      ]
+    },
+    {
+      "trial": 4,
+      "seed": 2050154039,
+      "measurement_protocol": "noisy search with independent proposal confirmation",
+      "settings": {
+        "dmd_rows": 16,
+        "dmd_cols": 16,
+        "camera_rows": 64,
+        "camera_cols": 64,
+        "target_rows": 5,
+        "target_cols": 5,
+        "noise_fraction": 0.02,
+        "iterations": 1500,
+        "seed": 2050154039
+      },
+      "target_region": {
+        "row_start": 15,
+        "row_stop": 20,
+        "col_start": 14,
+        "col_stop": 19
+      },
+      "initial_enhancement": 1.08470824379259,
+      "final_enhancement": 13.345720454748866,
+      "improvement_factor": 12.303511595050383,
+      "outputs": [
+        "outputs/task2_noisy_20261013_023751_907807/trial_04/focus_result.npz",
+        "outputs/task2_noisy_20261013_023751_907807/trial_04/initial_vs_final_camera.png",
+        "outputs/task2_noisy_20261013_023751_907807/trial_04/enhancement_history.png"
+      ]
+    }
+  ],
+  "mean_final_enhancement": 11.777839024548987,
+  "best_final_enhancement": 13.417501143111986,
+  "worst_final_enhancement": 10.128893302818973
+}
