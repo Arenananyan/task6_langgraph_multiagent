@@ -69,7 +69,9 @@ exact pending instruction in instruction. A refusal returns to you without that
 action. If the underlying request still calls for evaluation after a refusal,
 you may ask for approval again with human_kind=approval and pending_role=executor;
 do not call that a clarification unless the request itself is ambiguous.
-You may finish only after actual script execution printed test RMSE.
+You may finish after actual script execution printed test RMSE for Task 5, or
+printed FINAL_ENHANCEMENT for a Task 2 focusing request. If the user explicitly
+requested Task 2 only, do not demand or compute a Task 5 RMSE.
 Never fabricate a metric. Give a one-sentence reason. Max {MAX_DECISIONS} decisions.
 Current decision: {state.get('decision_count', 0) + 1}.
 Successful execution: {state.get('execution_success', False)}.
