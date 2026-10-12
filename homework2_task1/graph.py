@@ -45,12 +45,14 @@ class RouteDecision(BaseModel):
 def groq_router(state: State) -> RouteDecision:
     """Ask the model to choose the next graph edge from the shared dialogue."""
     from langchain_groq import ChatGroq
+    from groq import BadRequestError
 
     history = "\n".join(
         f"{message.name or message.type}: {message.content}"
         for message in state.get("messages", [])[-14:]
     )
-    model = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+    model = ChatGroq(model="openai/gpt-oss-120b", temperature=0,
+                     timeout=30, max_retries=0)
     router = model.with_structured_output(RouteDecision, method="json_schema")
     prompt = f"""You are the orchestrator of a four-role Silverbox LangGraph system.
 Read the dialogue and choose the next edge by reasoning; do not use a fixed role order.
@@ -63,16 +65,29 @@ Choose human with human_kind=approval BEFORE executor writes/runs code or overwr
 a saved result, and BEFORE finish reports a measurement. Set pending_role to the
 proposed executor or finish action and give a concrete yes/no question. Put the
 exact pending instruction in instruction. A refusal returns to you without that
-action. You may finish only after actual script execution printed test RMSE.
+action. If the underlying request still calls for evaluation after a refusal,
+you may ask for approval again with human_kind=approval and pending_role=executor;
+do not call that a clarification unless the request itself is ambiguous.
+You may finish only after actual script execution printed test RMSE.
 Never fabricate a metric. Give a one-sentence reason. Max {MAX_DECISIONS} decisions.
 Current decision: {state.get('decision_count', 0) + 1}.
 Successful execution: {state.get('execution_success', False)}.
 Measured test RMSE: {state.get('test_rmse')}.
 Dialogue:\n{history}"""
-    decision = router.invoke(prompt)
+    def invoke_with_json_retry(text: str) -> RouteDecision:
+        for attempt in range(3):
+            try:
+                return router.invoke(text)
+            except BadRequestError as error:
+                if "json_validate_failed" not in str(error) or attempt == 2:
+                    raise
+                text += "\nReturn exactly one JSON object matching the requested schema; no schema text."
+        raise AssertionError("Unreachable")
+
+    decision = invoke_with_json_retry(prompt)
     if decision.next_role in ("executor", "finish"):
         # Ask the model to produce the required human routing decision itself.
-        decision = router.invoke(
+        decision = invoke_with_json_retry(
             prompt + "\nIMPORTANT: Your previous answer skipped mandatory human approval. "
             "Choose next_role=human, human_kind=approval, pending_role equal to the "
             "intended executor or finish action, and ask a concrete yes/no question."
@@ -82,6 +97,20 @@ Dialogue:\n{history}"""
 
 def _specialist(name: str, state: State) -> dict:
     # Existing Task 6 specialists remain the implementation of the four roles.
+    if name in ("scientist", "general"):
+        # Keep the previous agents intact, but supply the actual Task 5 data
+        # convention so a conceptual answer cannot silently swap channels.
+        state = {**state, "instruction": state["instruction"] +
+                 "\nVerified Silverbox dataset facts: SNLS80mV.mat V1 is the measured "
+                 "driving input voltage u; V2 is the measured output voltage y. "
+                 "A sample is a synchronized input/output pair, not a position/velocity pair. "
+                 "Sampling frequency is 610.35 Hz. Do not invent circuit-node meanings."}
+    if name == "executor":
+        state = {**state, "instruction": state["instruction"] +
+                 "\nIntegration detail: task5_reference/scr/integrator.py stacks y, v, "
+                 "and each scalar u[i]. Pass scalar tensor initial conditions y[0] "
+                 "and (y[1] - y[0]) / dt directly; do not unsqueeze them. "
+                 "Execute the script and report only its actually printed TEST_RMSE_V."}
     if name == "scientist":
         from agents.scientist import scientist_node
         return scientist_node(state)

@@ -81,12 +81,23 @@ def main() -> None:
                 parser.error("Unknown thread ID.")
             _report(graph, config)
             if args.json_out:
+                # Previous interrupt questions live in checkpoint history even
+                # after the graph has resumed past them.
+                questions = []
+                for past in reversed(list(graph.get_state_history(config))):
+                    if not past.interrupts:
+                        continue
+                    item = past.interrupts[0].value
+                    questions.append({"decision": past.values.get("decision_count"),
+                                      "question": item["question"], "kind": item["kind"],
+                                      "pending_role": item["pending_role"]})
                 data = {
                     "thread_id": args.thread_id,
                     "decisions": snapshot.values.get("decision_count", 0),
                     "execution_success": snapshot.values.get("execution_success", False),
                     "test_rmse": snapshot.values.get("test_rmse"),
                     "pending_question": snapshot.interrupts[0].value if snapshot.interrupts else None,
+                    "human_questions": questions,
                     "messages": [{"role": m.name or m.type, "text": m.content}
                                  for m in snapshot.values.get("messages", [])],
                 }
