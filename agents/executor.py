@@ -166,22 +166,39 @@ def validate_generated_code(code: str) -> None:
                     )
 
 
-def focus_script() -> str:
-    """Return the small, reviewed runner used for the Task 2 tool call."""
-    return '''import json
-from tools.focusing_tool import FocusSettings, run_focus_experiment
+def focus_script(instruction: str, history: str) -> str:
+    """Let the executor model choose validated settings; run a fixed tool adapter."""
+    from pydantic import BaseModel, Field
+    from typing import Literal
 
-settings = FocusSettings(
-    dmd_rows=16, dmd_cols=16, camera_rows=64, camera_cols=64,
-    target_rows=5, target_cols=5, noise_fraction=0.02,
-    iterations=500, seed=42,
-)
-result = run_focus_experiment(settings, output_dir="outputs/task2_focus")
-print(json.dumps(result))
-print(f"FINAL_ENHANCEMENT: {result['final_enhancement']}")
-print(f"INITIAL_IMAGE_PATH: {result['outputs'][1]}")
-print(f"FINAL_IMAGE_PATH: {result['outputs'][2]}")
-'''
+    class Plan(BaseModel):
+        dmd_size: Literal[16, 24, 32]
+        target_size: Literal[3, 5, 7]
+        iterations: int = Field(ge=1000, le=2000)
+        trials: int = Field(ge=3, le=5)
+        reason: str
+
+    plan = llm.with_structured_output(Plan).invoke([
+        SystemMessage(content="Choose settings for a noisy amplitude-only scattering experiment. "
+                      "Camera is 64x64, Gaussian noise 2%. Choose DMD macropixel grid, "
+                      "square target size (four adjacent backgrounds of equal size), "
+                      "iterations and independent trials. Budget: 300 seconds total. "
+                      "Prefer 16x16 for speed; explain the tradeoff. Do not invent measurements."),
+        HumanMessage(content=instruction + "\nDialogue:\n" + history),
+    ])
+    print("Executor selected focusing settings: " + plan.model_dump_json(), flush=True)
+    settings = dict(dmd_rows=plan.dmd_size, dmd_cols=plan.dmd_size,
+                    target_rows=plan.target_size, target_cols=plan.target_size,
+                    iterations=plan.iterations)
+    return ("import json\nfrom datetime import datetime\n"
+            "from tools.focusing_tool import FocusSettings, run_focus_trials\n"
+            f"settings = FocusSettings(**{settings!r})\n"
+            "folder = 'outputs/task2_noisy_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f')\n"
+            f"print('Calling focusing tool: {plan.trials} independent noisy trials', flush=True)\n"
+            f"result = run_focus_trials(settings, trials={plan.trials}, output_dir=folder)\n"
+            "print('SUMMARY_PATH: ' + folder + '/summary.json')\n"
+            "print('FINAL_ENHANCEMENT: ' + str(result['mean_final_enhancement']))\n"
+            "print('Reported metric: mean final enhancement across all trials')\n")
 
 
 def executor_node(state: AgentState, review_mode: bool = False) -> dict:
@@ -200,7 +217,7 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         if focusing_task:
             # Keep Task 2 isolated from the legacy Task 5 RMSE generator.
-            code = focus_script()
+            code = focus_script(instruction, history)
         else:
             response = llm.invoke(
                 [

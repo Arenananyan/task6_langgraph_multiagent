@@ -110,8 +110,8 @@ class SimulatedBench:
             raise ValueError("noise_fraction must be non-negative")
         tr, tc = self.config.target_shape
         cr, cc = self.config.camera_shape
-        if (tr, tc) != (5, 5):
-            raise ValueError("This first implementation expects the selected 5x5 target.")
+        if min(tr, tc, *self.config.dmd_shape) < 1 or 5 * max(tr, tc) > min(cr, cc):
+            raise ValueError("Positive dimensions and space for adjacent backgrounds required.")
         if tr > cr or tc > cc:
             raise ValueError("Target region must fit inside the camera.")
 

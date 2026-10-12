@@ -108,7 +108,7 @@ def _specialist(name: str, state: State) -> dict:
                  "driving input voltage u; V2 is the measured output voltage y. "
                  "A sample is a synchronized input/output pair, not a position/velocity pair. "
                  "Sampling frequency is 610.35 Hz. Do not invent circuit-node meanings."}
-    if name == "executor":
+    if name == "executor" and not any(word in state["instruction"].lower() for word in ("focus", "enhancement")):
         state = {**state, "instruction": state["instruction"] +
                  "\nIntegration detail: task5_reference/scr/integrator.py stacks y, v, "
                  "and each scalar u[i]. Pass scalar tensor initial conditions y[0] "

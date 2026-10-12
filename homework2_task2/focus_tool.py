@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import numpy as np
 from pathlib import Path
 
 try:
@@ -42,6 +43,7 @@ def run_focus_experiment(settings: FocusSettings = FocusSettings(), output_dir: 
     result = focus(bench, iterations=settings.iterations)
     save_result(result, Path(output_dir))
     return {
+        "measurement_protocol": "noisy search with independent proposal confirmation",
         "settings": asdict(settings),
         "target_region": asdict(result.final.target),
         "initial_enhancement": result.initial.enhancement,
@@ -61,17 +63,19 @@ def run_focus_trials(settings: FocusSettings = FocusSettings(), trials: int = 5,
     if trials <= 0:
         raise ValueError("trials must be positive")
     root = Path(output_dir)
-    seed_rng = __import__("numpy").random.default_rng()
+    seed_rng = np.random.default_rng()
     results = []
     for index in range(1, trials + 1):
+        print(f"Starting trial {index}/{trials}", flush=True)
         seed = int(seed_rng.integers(0, 2**32 - 1))
         trial_settings = FocusSettings(**{**asdict(settings), "seed": seed})
         result = run_focus_experiment(trial_settings, root / f"trial_{index:02d}")
+        print(f"Trial {index}: final enhancement={result['final_enhancement']:.6f}", flush=True)
         results.append({"trial": index, "seed": seed, **result})
     enhancements = [float(item["final_enhancement"]) for item in results]
     summary = {
         "trials": results,
-        "mean_final_enhancement": float(__import__("numpy").mean(enhancements)),
+        "mean_final_enhancement": float(np.mean(enhancements)),
         "best_final_enhancement": float(max(enhancements)),
         "worst_final_enhancement": float(min(enhancements)),
     }

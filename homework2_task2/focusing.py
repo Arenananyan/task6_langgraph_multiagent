@@ -7,7 +7,10 @@ from pathlib import Path
 
 import numpy as np
 
-from simulator import BenchConfig, Measurement, SimulatedBench
+try:
+    from .simulator import BenchConfig, Measurement, SimulatedBench
+except ImportError:
+    from simulator import BenchConfig, Measurement, SimulatedBench
 
 
 @dataclass(frozen=True)
@@ -20,13 +23,10 @@ class FocusResult:
 
 
 def focus(bench: SimulatedBench, iterations: int = 500) -> FocusResult:
-    """Improve enhancement with discrete coordinate descent.
+    """Coordinate search using fresh noisy camera measurements only.
 
-    A coordinate proposal is evaluated at several allowed amplitude levels.
-    The noiseless objective is used while searching so that Gaussian camera
-    noise does not make the optimizer accept/reject a good proposal randomly.
-    The returned initial and final measurements remain noisy, matching the
-    simulated camera used for reporting.
+    Remeasure the incumbent each step to avoid keeping a lucky noisy score.
+    Independently confirm the winning proposal before accepting it.
     """
     if iterations <= 0:
         raise ValueError("iterations must be positive")
@@ -34,7 +34,7 @@ def focus(bench: SimulatedBench, iterations: int = 500) -> FocusResult:
     pattern = bench.rng.random(bench.config.dmd_shape)
     initial_pattern = pattern.copy()
     initial = bench.measure(pattern)
-    current = bench.measure(pattern, noisy=False)
+    current = bench.measure(pattern)
     amplitude_levels = (0.0, 0.25, 0.5, 0.75, 1.0)
     history = np.empty(iterations + 1, dtype=np.float64)
     history[0] = current.enhancement
@@ -42,17 +42,25 @@ def focus(bench: SimulatedBench, iterations: int = 500) -> FocusResult:
     for step in range(1, iterations + 1):
         row = int(bench.rng.integers(bench.config.dmd_shape[0]))
         col = int(bench.rng.integers(bench.config.dmd_shape[1]))
+        current = bench.measure(pattern)
         best_pattern = pattern
         best_measurement = current
         for amplitude in amplitude_levels:
             candidate = pattern.copy()
             candidate[row, col] = amplitude
-            proposal = bench.measure(candidate, noisy=False)
+            proposal = bench.measure(candidate)
             if proposal.enhancement > best_measurement.enhancement:
                 best_pattern = candidate
                 best_measurement = proposal
-        pattern = best_pattern
-        current = best_measurement
+        # Fresh confirmation reduces selection bias across the five proposals.
+        if best_pattern is not pattern:
+            confirmation = bench.measure(best_pattern)
+            baseline = bench.measure(pattern)
+            if confirmation.enhancement > baseline.enhancement:
+                pattern = best_pattern
+                current = confirmation
+            else:
+                current = baseline
         history[step] = current.enhancement
 
     final = bench.measure(pattern)
@@ -65,6 +73,8 @@ def save_result(result: FocusResult, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     np.savez(
         output_dir / "focus_result.npz",
+        initial_intensity=result.initial.intensity,
+        final_intensity=result.final.intensity,
         initial_pattern=result.initial_pattern,
         final_pattern=result.final_pattern,
         enhancement_history=result.history,
@@ -87,7 +97,7 @@ def save_result(result: FocusResult, output_dir: Path) -> None:
         image = ax.imshow(measurement.intensity, cmap="inferno", vmin=0, vmax=vmax,
                           interpolation="nearest", origin="lower")
         ax.add_patch(plt.Rectangle(
-            (measurement.target.col_start, measurement.target.row_start),
+            (measurement.target.col_start - 0.5, measurement.target.row_start - 0.5),
             measurement.target.col_stop - measurement.target.col_start,
             measurement.target.row_stop - measurement.target.row_start,
             fill=False, edgecolor="#22d3ee", linewidth=2.0,
