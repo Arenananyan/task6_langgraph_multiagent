@@ -76,7 +76,24 @@ Never fabricate a metric. Give a one-sentence reason. Max {MAX_DECISIONS} decisi
 Current decision: {state.get('decision_count', 0) + 1}.
 Successful execution: {state.get('execution_success', False)}.
 Measured test RMSE: {state.get('test_rmse')}.
+Measured final enhancement: {state.get('final_enhancement')}.
 Dialogue:\n{history}"""
+    if state.get("execution_success") and (
+        state.get("test_rmse") is not None or state.get("final_enhancement") is not None
+    ):
+        # A completed measurement must not run again. The model still writes
+        # the next question and reason, with only the safe finish edge open.
+        class FinishApproval(BaseModel):
+            question: str = Field(description="Concrete yes/no question asking to report the measured result and finish")
+            reason: str = Field(description="One sentence explaining why the run is complete")
+
+        answer = model.with_structured_output(FinishApproval, method="json_schema").invoke(
+            prompt + "\nThe executor has completed successfully. Ask approval to report "
+            "the measured result and finish. Do not propose another execution."
+        )
+        return RouteDecision(next_role="human", human_kind="approval",
+                             pending_role="finish", question=answer.question,
+                             reason=answer.reason, instruction="Report the measured result and finish.")
     def invoke_with_json_retry(text: str) -> RouteDecision:
         for attempt in range(3):
             try:
@@ -140,6 +157,16 @@ def build_graph(checkpointer, router: Callable[[State], RouteDecision] = groq_ro
         decision = router(state)
         if not isinstance(decision, RouteDecision):
             decision = RouteDecision.model_validate(decision)
+        if state.get("execution_success") and (
+            state.get("test_rmse") is not None or state.get("final_enhancement") is not None
+        ) and decision.pending_role == "executor":
+            # Enforce the completed-run invariant even for a custom router.
+            decision = RouteDecision(
+                next_role="human", human_kind="approval", pending_role="finish",
+                question="Do you approve reporting the measured result and finishing?",
+                reason="The executor already completed the requested measurement.",
+                instruction="Report the measured result and finish.",
+            )
         if decision.next_role in ("executor", "finish"):
             raise ValueError("The model must request human approval before executor or finish.")
         if decision.next_role == "human":
@@ -195,6 +222,15 @@ def build_graph(checkpointer, router: Callable[[State], RouteDecision] = groq_ro
 
         # Approval is deliberately narrow. Any ambiguous response counts as refusal.
         accepted = reply.casefold() in {"yes", "y", "approve", "approved", "accept", "այո", "հա", "հաստատում եմ"}
+        if accepted and state["pending_role"] == "executor" and state.get("execution_success") and (
+            state.get("test_rmse") is not None or state.get("final_enhancement") is not None
+        ):
+            # Older checkpoints can contain an already-issued duplicate
+            # executor approval. Do not execute a second time on resume.
+            return {**update, "approved_role": "", "pending_role": "",
+                    "messages": [*update["messages"], AIMessage(
+                        content="The completed experiment was retained; no second execution was needed.",
+                        name="system_status")]}
         if accepted:
             return {**update, "approved_role": state["pending_role"],
                     "instruction": state["pending_instruction"], "pending_role": ""}

@@ -76,6 +76,16 @@ class HumanTurnTests(unittest.TestCase):
         self.assertEqual(state.values["test_rmse"], 0.0245)
         self.assertEqual(sum(name == "executor" for name, _ in self.calls), 1)
 
+    def test_completed_measurement_cannot_trigger_duplicate_execution(self):
+        approve = RouteDecision(next_role="human", instruction="Run focusing tool.",
+                                reason="Needs approval.", question="Run it?",
+                                human_kind="approval", pending_role="executor")
+        self.decisions = [approve, approve]
+        self.start("Focus the beam")
+        self.graph.invoke(Command(resume="yes"), self.config)
+        self.assertEqual(sum(name == "executor" for name, _ in self.calls), 1)
+        self.assertEqual(self.question()["pending_role"], "finish")
+
     def test_sqlite_resume_after_graph_is_recreated(self):
         def router(state):
             names = [message.name for message in state["messages"]]
