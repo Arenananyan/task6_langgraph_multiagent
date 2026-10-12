@@ -121,12 +121,18 @@ def build_graph(checkpointer, router: Callable[[State], RouteDecision] = groq_ro
                 state.get("execution_success") and state.get("test_rmse") is not None
             ):
                 raise ValueError("Cannot request approval to finish before measured RMSE.")
+        question = decision.question
+        if decision.next_role == "human" and decision.human_kind == "approval":
+            if decision.pending_role == "executor":
+                question += " The executor will write and run a Python file; an existing attempt file may be overwritten. Proceed?"
+            elif decision.pending_role == "finish":
+                question += f" The measured test RMSE is {state['test_rmse']:.9f} V. Report it and finish?"
         return {
             "next_role": decision.next_role,
             "instruction": decision.instruction,
             "reason": decision.reason,
             "decision_count": count + 1,
-            "human_question": decision.question,
+            "human_question": question,
             "human_kind": decision.human_kind,
             "pending_role": decision.pending_role,
             "pending_instruction": decision.instruction if decision.pending_role else "",
