@@ -167,7 +167,7 @@ def validate_generated_code(code: str) -> None:
 
 
 def focus_script(instruction: str, history: str) -> str:
-    """Let the executor model choose validated settings; run a fixed tool adapter."""
+    """Get a validated model choice, then build the reviewed tool adapter."""
     from pydantic import BaseModel, Field
     from typing import Literal
 
@@ -178,17 +178,37 @@ def focus_script(instruction: str, history: str) -> str:
         trials: int = Field(ge=3, le=5)
         reason: str
 
-    plan = llm.with_structured_output(Plan).invoke([
-        SystemMessage(content="Choose settings for a noisy amplitude-only scattering experiment. "
+    prompt = (
+        "Choose settings for a noisy amplitude-only scattering experiment. "
                       "Camera is 64x64, Gaussian noise 2%. Choose DMD macropixel grid, "
                       "square target size (four adjacent backgrounds of equal size), "
                       "iterations and independent trials. REQUIRED choices: dmd_size in [16,24,32], "
                       "target_size in [3,5,7], iterations in [1000,1500,2000], trials in [3,4,5]. "
                       "Never choose 200 iterations: it is outside the allowed experiment budget. "
                       "Budget: 300 seconds total. "
-                      "Prefer 16x16 for speed; explain the tradeoff. Do not invent measurements."),
-        HumanMessage(content=instruction + "\nDialogue:\n" + history),
-    ])
+                      "Prefer 16x16 for speed; explain the tradeoff. "
+                      "Return ONLY a JSON object with keys dmd_size, target_size, iterations, "
+                      "trials, reason. No Markdown, no results, and no claims of execution."
+    )
+    plan = None
+    error = None
+    for _ in range(3):
+        response = llm.invoke([
+            SystemMessage(content=prompt),
+            HumanMessage(content=instruction + "\nDialogue:\n" + history +
+                         (f"\nPrevious format error: {error}" if error else "")),
+        ])
+        try:
+            # A plain model call avoids Groq's brittle forced-tool validation.
+            raw = response.content.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw).strip()
+            plan = Plan.model_validate_json(raw)
+            break
+        except (ValueError, AttributeError) as exc:
+            error = str(exc)[:300]
+    if plan is None:
+        raise ValueError(f"Model did not select valid focusing settings: {error}")
     print("Executor selected focusing settings: " + plan.model_dump_json(), flush=True)
     settings = dict(dmd_rows=plan.dmd_size, dmd_cols=plan.dmd_size,
                     target_rows=plan.target_size, target_cols=plan.target_size,
