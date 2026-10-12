@@ -69,14 +69,17 @@ Requirements:
 - Never claim execution occurred; the Python runner will actually execute it.
 
 Task 2 focusing action:
-- If the instruction asks to focus a simulated beam, use the installed bridge
-  `from tools.focusing_tool import FocusSettings, run_focus_experiment`.
-- The tool simulates the lecture setup: a 16x16 amplitude DMD, a 64x64 camera,
-  a 5x5 target, four 5x5 background regions, 2% Gaussian noise, and 500
-  iterations. The agent must choose and record the settings; do not invent a
-  camera measurement or enhancement value.
-- Call `run_focus_experiment(...)`, print its returned dictionary as JSON, and
-  include the actual `final_enhancement` in the executor message.
+- If the instruction asks to focus a simulated beam, use only the installed
+  bridge `from tools.focusing_tool import FocusSettings, run_focus_experiment`.
+- Construct settings only with these valid fields: `iterations`, `seed`, and,
+  when needed, `noise_fraction`, `dmd_rows`, `dmd_cols`, `camera_rows`,
+  `camera_cols`, `target_rows`, `target_cols`. Do not invent fields such as
+  `dmd_amplitude`, `target_center`, `target_radius`, or `background_radius`.
+- The selected baseline is a 16x16 amplitude DMD, 64x64 camera, 5x5 target,
+  four adjacent 5x5 background regions, 2% Gaussian noise, and 500 iterations.
+- Do not append the Task 5 RMSE code to a Task 2 focusing script. Call
+  `run_focus_experiment(...)`, print its returned dictionary as JSON, and
+  report the actual `final_enhancement` and saved image paths.
 """
 
 
