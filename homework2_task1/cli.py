@@ -39,6 +39,8 @@ def _report(graph, config, previous_count: int = 0) -> None:
         print("\nThread stopped.")
         if state.get("execution_success") and state.get("test_rmse") is not None:
             print(f"Actual test RMSE: {state['test_rmse']:.9f} V")
+        if state.get("execution_success") and state.get("final_enhancement") is not None:
+            print(f"Actual final enhancement: {state['final_enhancement']:.9f}")
     print("Decisions:", state.get("decision_count", 0))
 
 

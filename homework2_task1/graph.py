@@ -25,6 +25,7 @@ class State(TypedDict, total=False):
     decision_count: int
     execution_success: bool
     test_rmse: float | None
+    final_enhancement: float | None
     human_question: str
     human_kind: Literal["clarification", "approval"]
     pending_role: Pending
@@ -147,15 +148,21 @@ def build_graph(checkpointer, router: Callable[[State], RouteDecision] = groq_ro
             if decision.human_kind == "clarification" and decision.pending_role:
                 raise ValueError("Clarification cannot contain a pending action.")
             if decision.pending_role == "finish" and not (
-                state.get("execution_success") and state.get("test_rmse") is not None
+                state.get("execution_success")
+                and (state.get("test_rmse") is not None
+                     or state.get("final_enhancement") is not None)
             ):
-                raise ValueError("Cannot request approval to finish before measured RMSE.")
+                raise ValueError("Cannot request approval to finish before a measured result.")
         question = decision.question
         if decision.next_role == "human" and decision.human_kind == "approval":
             if decision.pending_role == "executor":
                 question += " The executor will write and run a Python file; an existing attempt file may be overwritten. Proceed?"
             elif decision.pending_role == "finish":
-                question += f" The measured test RMSE is {state['test_rmse']:.9f} V. Report it and finish?"
+                if state.get("test_rmse") is not None:
+                    result_text = f"The measured test RMSE is {state['test_rmse']:.9f} V."
+                else:
+                    result_text = f"The measured final enhancement is {state['final_enhancement']:.9f}."
+                question += f" {result_text} Report it and finish?"
         return {
             "next_role": decision.next_role,
             "instruction": decision.instruction,

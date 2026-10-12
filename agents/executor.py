@@ -300,6 +300,7 @@ def executor_node(state: AgentState, review_mode: bool = False) -> dict:
         ],
         "execution_success": success,
         "test_rmse": measured_rmse if success and not focusing_task else None,
+        "final_enhancement": measured_enhancement if success and focusing_task else None,
     }
 
 
