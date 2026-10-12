@@ -147,7 +147,7 @@ class HumanTurnTests(unittest.TestCase):
         self.decisions = [RouteDecision(next_role="human", instruction="Report result.",
                                         reason="Ready.", question="Finish?",
                                         human_kind="approval", pending_role="finish")]
-        with self.assertRaisesRegex(ValueError, "measured RMSE"):
+        with self.assertRaisesRegex(ValueError, "measured result"):
             self.start("Report the result")
 
 
