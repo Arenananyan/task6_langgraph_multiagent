@@ -66,8 +66,20 @@ python -m homework2_task1.cli status --thread-id hw2-approval-01 --json-out outp
 
 The SQLite checkpoint and local transcripts stay under
 `outputs/homework2_task1/` and are ignored by Git. For the report, copy only
-the relevant verified turns and the actual printed RMSE. An offline check of
-clarification, refusal, approval and persistent resume is available with:
+the relevant verified turns and the actual printed RMSE.
+
+If a model request fails temporarily (for example, Groq returns a 429 rate
+limit), the completed turns stay in SQLite. Wait for the limit to clear and
+retry the pending graph step without repeating your answer:
+
+```bash
+python -m homework2_task1.cli continue --thread-id hw2-ambiguity-01
+```
+
+Use `resume --reply` only when the graph displays a new human question.
+
+An offline check of clarification, refusal, approval and persistent resume is
+available with:
 
 ```bash
 python -m unittest homework2_task1.test_graph -v

@@ -106,6 +106,36 @@ class HumanTurnTests(unittest.TestCase):
                 self.assertEqual(graph.get_state(self.config).interrupts[0].value["pending_role"],
                                  "executor")
 
+    def test_continue_pending_node_after_transient_model_failure(self):
+        attempts = 0
+
+        def router(state):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                return RouteDecision(next_role="human", instruction="", reason="Ambiguous.",
+                                     question="Which record?", human_kind="clarification")
+            if attempts == 2:
+                raise RuntimeError("temporary model failure")
+            return RouteDecision(next_role="human", instruction="Evaluate.",
+                                 reason="Approval needed.", question="Run evaluation?",
+                                 human_kind="approval", pending_role="executor")
+
+        graph = build_graph(InMemorySaver(), router=router,
+                            specialist=lambda name, state: {"messages": []})
+        graph.invoke({"messages": [HumanMessage(content="Explain the record", name="user")],
+                      "decision_count": 0}, self.config)
+        with self.assertRaisesRegex(RuntimeError, "temporary model failure"):
+            graph.invoke(Command(resume="The measured data"), self.config)
+        snapshot = graph.get_state(self.config)
+        self.assertEqual(snapshot.next, ("orchestrator",))
+        self.assertFalse(snapshot.interrupts)
+        graph.invoke(None, self.config)
+        snapshot = graph.get_state(self.config)
+        self.assertEqual(snapshot.interrupts[0].value["pending_role"], "executor")
+        self.assertEqual(sum(m.name == "human" and m.content == "The measured data"
+                             for m in snapshot.values["messages"]), 1)
+
     def test_executor_cannot_be_routed_without_human_approval(self):
         self.decisions = [RouteDecision(next_role="executor", instruction="Run it.",
                                         reason="Needed.")]

@@ -1,4 +1,4 @@
-"""Start, resume and inspect persistent Homework 2 Task 1 conversations."""
+"""Start, resume, continue and inspect persistent Homework 2 Task 1 conversations."""
 
 from __future__ import annotations
 
@@ -31,6 +31,10 @@ def _report(graph, config, previous_count: int = 0) -> None:
         print("Pending action:", payload["pending_role"] or "none")
         print("Resume this same thread with: python -m homework2_task1.cli resume --thread-id",
               config["configurable"]["thread_id"], "--reply 'YOUR ANSWER'")
+    elif snapshot.next:
+        print("\nThread has a pending step:", ", ".join(snapshot.next))
+        print("Continue this same thread with: python -m homework2_task1.cli continue --thread-id",
+              config["configurable"]["thread_id"])
     else:
         print("\nThread stopped.")
         if state.get("execution_success") and state.get("test_rmse") is not None:
@@ -47,6 +51,8 @@ def main() -> None:
     resume = sub.add_parser("resume")
     resume.add_argument("--thread-id", required=True)
     resume.add_argument("--reply", required=True)
+    continuation = sub.add_parser("continue")
+    continuation.add_argument("--thread-id", required=True)
     status = sub.add_parser("status")
     status.add_argument("--thread-id", required=True)
     status.add_argument("--json-out", type=Path)
@@ -75,6 +81,16 @@ def main() -> None:
                 parser.error("Reply cannot be empty.")
             count = len(snapshot.values.get("messages", []))
             graph.invoke(Command(resume=args.reply), config)
+            _report(graph, config, count)
+        elif args.action == "continue":
+            if not snapshot.values:
+                parser.error("Unknown thread ID.")
+            if snapshot.interrupts:
+                parser.error("A human question is pending; use resume --reply instead.")
+            if not snapshot.next:
+                parser.error("This thread has no pending step to continue.")
+            count = len(snapshot.values.get("messages", []))
+            graph.invoke(None, config)
             _report(graph, config, count)
         else:
             if not snapshot.values:
