@@ -174,7 +174,7 @@ def focus_script(instruction: str, history: str) -> str:
     class Plan(BaseModel):
         dmd_size: Literal[16, 24, 32]
         target_size: Literal[3, 5, 7]
-        iterations: int = Field(ge=1000, le=2000)
+        iterations: Literal[1000, 1500, 2000]
         trials: int = Field(ge=3, le=5)
         reason: str
 
@@ -182,7 +182,10 @@ def focus_script(instruction: str, history: str) -> str:
         SystemMessage(content="Choose settings for a noisy amplitude-only scattering experiment. "
                       "Camera is 64x64, Gaussian noise 2%. Choose DMD macropixel grid, "
                       "square target size (four adjacent backgrounds of equal size), "
-                      "iterations and independent trials. Budget: 300 seconds total. "
+                      "iterations and independent trials. REQUIRED choices: dmd_size in [16,24,32], "
+                      "target_size in [3,5,7], iterations in [1000,1500,2000], trials in [3,4,5]. "
+                      "Never choose 200 iterations: it is outside the allowed experiment budget. "
+                      "Budget: 300 seconds total. "
                       "Prefer 16x16 for speed; explain the tradeoff. Do not invent measurements."),
         HumanMessage(content=instruction + "\nDialogue:\n" + history),
     ])
