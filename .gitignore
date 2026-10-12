@@ -25,7 +25,10 @@ outputs/generated_solution.py
 !outputs/plots/*.png
 
 # Separate Task 5 reference repository
-task5_reference/
+task5_reference
 
 # Local Python execution and test artifacts
 outputs/*.py
+
+# Homework 2 Task 1 persistent graph state and local transcripts
+outputs/homework2_task1/

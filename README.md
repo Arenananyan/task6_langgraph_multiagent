@@ -1,5 +1,9 @@
 # Task 6 — LangGraph Multi-Agent System for Silverbox Oscillator Modeling
 
+**Homework 2, Task 1 extension:** The separate [human-in-the-loop guide](homework2_task1/README.md)
+adds clarification and approval turns with durable LangGraph interruption and
+resume. The Task 6 workflow described below remains available unchanged.
+
 ## Overview
 
 This project implements a multi-agent AI workflow using **LangGraph** and the **Groq API** to reproduce and evaluate a neural-network model of the Silverbox nonlinear oscillator from Task 5.
