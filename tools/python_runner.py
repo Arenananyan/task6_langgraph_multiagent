@@ -49,6 +49,14 @@ def run_python_code(
     environment = os.environ.copy()
     environment.pop("GROQ_API_KEY", None)
     environment.pop("GEMINI_API_KEY", None)
+    # Generated files live under outputs/, so explicitly expose the project
+    # root for imports such as `from tools.focusing_tool import ...`.
+    existing_pythonpath = environment.get("PYTHONPATH", "")
+    environment["PYTHONPATH"] = (
+        str(PROJECT_ROOT)
+        if not existing_pythonpath
+        else str(PROJECT_ROOT) + os.pathsep + existing_pythonpath
+    )
 
     try:
         result = subprocess.run(
